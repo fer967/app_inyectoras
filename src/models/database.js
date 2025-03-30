@@ -1,21 +1,21 @@
 const { Sequelize, DataTypes } = require('sequelize');
 
-/*const sequelize = new Sequelize(process.env.DATABASE_URL, {
+const sequelize = new Sequelize(process.env.DATABASE_URL, {
     dialect: 'postgres', 
     logging: false
-}); */
+}); 
 
-const sequelize = new Sequelize(process.env.DATABASE_URL, {
+/*const sequelize = new Sequelize(process.env.DATABASE_URL, {
     dialect: 'postgres',
     protocol: 'postgres',
     logging: false,
     dialectOptions: {
         ssl: {
-            require: true,
+            require: false,
             rejectUnauthorized: false // Ajustar según el entorno
         }
     }
-});
+});  */
 
 
 const Inyectora = require('./inyectora.js')(sequelize, DataTypes);
