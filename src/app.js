@@ -11,7 +11,7 @@ const { sequelize } = require('./models/database.js');
 const helpers = require('./helpers.js');
 
 const app = express();
-const port = 8000;
+const port = process.env.PORT || 8000;
 
 // Configuración de Handlebars
 app.engine('hbs', engine({
@@ -45,17 +45,6 @@ app.use(session({
     }
 }));
 
-/*app.use(session({
-    secret: process.env.SESSION_SECRET,  
-    resave: false,
-    saveUninitialized: false,
-    store: new SequelizeStore({
-        db: sequelize
-    }),
-    cookie: {
-        maxAge: 30 * 60 * 1000 // 30 minutos de inactividad
-    }
-}));  */
 
 
 // Middleware para verificar si el usuario está autenticado
