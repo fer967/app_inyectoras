@@ -1,0 +1,17 @@
+<h1>App de Mantenimiento</h1>
+<h3>Consultas</h3>
+<br>
+<form action="/consultar/mostrar-reparaciones" method="post">
+    <button type="submit" class="btn btn-primary">Mostrar reparaciones realizadas</button>
+</form>
+<br>
+<br>
+<form action="/consultar/consultar-bot" method="post">
+    <div class="form-group">
+        <label for="pregunta_bot"></label>
+        <input type="text" class="form-control" id="pregunta_bot" name="pregunta_bot" placeholder="Escribe tu pregunta aquí" required>
+    </div>
+    <button type="submit" class="btn btn-info">Consultar al Bot</button>
+</form>
+<br>
+<a href="/consultar/ingresar-reparacion">Ingresar Nueva Reparación</a>

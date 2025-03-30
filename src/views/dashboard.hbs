@@ -1,0 +1,29 @@
+<h1>Dashboard de Fallas</h1>
+
+<div id="chart"></div>
+
+{{!-- si no uso la libreria de forma local uso cdn (ver) --}}
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+    // Obtener las estadísticas del backend
+    const estadisticas = {{{ estadisticas }}};
+    //console.log('Estadísticas recibidas en el frontend:', estadisticas);  // ver !!!
+    // Configurar el gráfico de ApexCharts
+    var options = {
+        chart: {
+            type: 'bar'
+        },
+        series: [{
+            name: 'Cantidad de Fallas',
+            data: Object.values(estadisticas.fallasPorMarca)
+        }],
+        xaxis: {
+            categories: Object.keys(estadisticas.fallasPorMarca)
+        }
+    }
+    // Crear el gráfico
+    var chart = new ApexCharts(document.querySelector("#chart"), options);
+    // Renderizar el gráfico
+    chart.render();
+</script>
+<a href="/">Volver a Inicio</a>

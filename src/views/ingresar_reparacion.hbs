@@ -1,0 +1,42 @@
+<h1>Ingresar Reparación de Inyectora</h1>
+
+<form action="/consultar/ingresar-reparacion" method="post">
+    <div class="form-group">
+        <label for="marca">Marca:</label>
+        <input type="text" class="form-control" id="marca" name="marca" required>
+    </div>
+
+    <div class="form-group">
+        <label for="modelo">Modelo:</label>
+        <input type="text" class="form-control" id="modelo" name="modelo" required>
+    </div>
+
+    <div class="form-group">
+        <label for="falla">Falla:</label>
+        <textarea class="form-control" id="falla" name="falla" rows="3"></textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="reparacion_realizada">Reparación Realizada:</label>
+        <textarea class="form-control" id="reparacion_realizada" name="reparacion_realizada" rows="3"></textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="operario_nombre">Nombre del Operario:</label>
+        <input type="text" class="form-control" id="operario_nombre" name="operario_nombre" required>
+    </div>
+
+    <div class="form-group">
+        <label for="operario_apellido">Apellido del Operario:</label>
+        <input type="text" class="form-control" id="operario_apellido" name="operario_apellido" required>
+    </div>
+
+    <div class="form-group">
+        <label for="fecha">Fecha:</label>
+        <input type="date" class="form-control" id="fecha" name="fecha" required>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Guardar Reparación</button>
+</form>
+
+<a href="/consultar">Volver</a>

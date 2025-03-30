@@ -1,0 +1,33 @@
+<h1>Reparaciones realizadas</h1>
+{{#if resultados}}
+<table class="table">
+    <thead>
+        <tr>
+            <th>Marca</th>
+            <th>Modelo</th>
+            <th>Falla</th>
+            <th>Reparacion_realizada</th>
+            <th>Fecha</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{#each resultados}}
+        <tr>
+            <td>{{marca}}</td>
+            <td>{{modelo}}</td>
+            <td>{{falla}}</td>
+            <td>{{reparacion_realizada}}</td>
+            <td>{{formatDate fecha "DD/MM/YYYY"}}</td>
+        </tr>
+        {{/each}}
+    </tbody>
+</table>
+{{else}}
+<p>No se encontraron resultados.</p>
+{{/if}}
+
+<a href="/consultar">Volver a Inicio</a>
+<br>
+<a href="/auth/logout">cerrar sesion</a>
+
+

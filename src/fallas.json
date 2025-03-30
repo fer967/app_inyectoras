@@ -1,0 +1,172 @@
+[
+    {
+        "falla": "Baja presión hidráulica",
+        "causas_posibles": [
+            "Fugas de aceite",
+            "Bomba hidráulica defectuosa",
+            "Válvulas hidráulicas defectuosas",
+            "Nivel bajo de aceite hidráulico",
+            "Filtro de aceite obstruido"
+        ],
+        "soluciones": [
+            "Inspeccionar y reparar fugas de aceite",
+            "Reemplazar bomba hidráulica",
+            "Reemplazar válvulas hidráulicas",
+            "Verificar y rellenar el nivel de aceite",
+            "Limpiar o reemplazar el filtro de aceite"
+        ],
+        "maquinas_aplicables": [
+            "Arburg 270 S",
+            "Engel Victory 500/120",
+            "KraussMaffei KM 65-160 CX"
+        ],
+        "sistema": "Sistema Hidráulico"
+    },
+    {
+        "falla": "Sobrecalentamiento del aceite hidráulico",
+        "causas_posibles": [
+            "Enfriador de aceite defectuoso",
+            "Nivel bajo de aceite",
+            "Aceite contaminado",
+            "Problemas con la bomba hidráulica"
+        ],
+        "soluciones": [
+            "Reemplazar enfriador de aceite",
+            "Verificar y rellenar el nivel de aceite",
+            "Reemplazar aceite",
+            "Revisar bomba hidráulica"
+        ],
+        "maquinas_aplicables": [
+            "Arburg 270 S",
+            "Engel Victory 500/120",
+            "KraussMaffei KM 65-160 CX"
+        ],
+        "sistema": "Sistema Hidráulico"
+    },
+    {
+        "falla": "No se inyecta el material",
+        "causas_posibles": [
+            "Tolva vacía",
+            "Material atascado",
+            "Tornillo de plastificación defectuoso",
+            "Boquilla obstruida",
+            "Problema con el cilindro de inyección",
+            "Falla en el motor de inyección"
+        ],
+        "soluciones": [
+            "Rellenar la tolva",
+            "Desatascar el material",
+            "Reemplazar el tornillo de plastificación",
+            "Limpiar la boquilla",
+            "Revisar el cilindro de inyección",
+            "Revisar el motor de inyección"
+        ],
+        "maquinas_aplicables": [
+            "Arburg 270 S",
+            "Arburg 320 C",
+            "Engel e-mac 100/50"
+        ],
+        "sistema": "Sistema de Inyección"
+    },
+    {
+        "falla": "Fallo en el sistema eléctrico de calentamiento",
+        "causas_posibles": [
+            "Resistencia eléctrica quemada",
+            "Problema en la conexión eléctrica",
+            "Fusible fundido",
+            "Falla en el termostato"
+        ],
+        "soluciones": [
+            "Reemplazar la resistencia eléctrica",
+            "Verificar y reparar las conexiones eléctricas",
+            "Reemplazar fusibles",
+            "Reemplazar o calibrar el termostato"
+        ],
+        "maquinas_aplicables": [
+            "KraussMaffei KM 65-160 CX",
+            "Arburg 320 S",
+            "Engel Victory 500/120"
+        ],
+        "sistema": "Sistema Eléctrico"
+    },
+    {
+        "falla": "Fuga de aire en el sistema neumático",
+        "causas_posibles": [
+            "Tuberías neumáticas dañadas",
+            "Conexiones sueltas o defectuosas",
+            "Fugas en válvulas de control",
+            "Falta de mantenimiento en el compresor"
+        ],
+        "soluciones": [
+            "Reemplazar las tuberías dañadas",
+            "Ajustar o reemplazar conexiones defectuosas",
+            "Reemplazar válvulas de control con fugas",
+            "Realizar mantenimiento al compresor"
+        ],
+        "maquinas_aplicables": [
+            "Arburg 270 S",
+            "KraussMaffei KM 65-160 CX"
+        ],
+        "sistema": "Sistema Neumático"
+    },
+    {
+        "falla": "Fallo en el motor eléctrico de la inyectora",
+        "causas_posibles": [
+            "Desgaste del motor",
+            "Sobrecarga del motor",
+            "Problemas con el variador de frecuencia",
+            "Conexión eléctrica deficiente"
+        ],
+        "soluciones": [
+            "Reemplazar el motor",
+            "Verificar y ajustar la carga del motor",
+            "Reemplazar o reparar el variador de frecuencia",
+            "Revisar y reparar conexiones eléctricas"
+        ],
+        "maquinas_aplicables": [
+            "Arburg 270 S",
+            "Engel Victory 500/120"
+        ],
+        "sistema": "Sistema Eléctrico"
+    },
+    {
+        "falla": "Falla en el sistema de inyección (mala calidad de inyección)",
+        "causas_posibles": [
+            "Presión de inyección incorrecta",
+            "Problemas en la válvula de inyección",
+            "Falta de aire comprimido",
+            "Control de temperatura deficiente"
+        ],
+        "soluciones": [
+            "Ajustar presión de inyección",
+            "Revisar y reemplazar válvula de inyección",
+            "Verificar y mantener sistema neumático",
+            "Ajustar control de temperatura"
+        ],
+        "maquinas_aplicables": [
+            "Engel Victory 500/120",
+            "KraussMaffei KM 65-160 CX"
+        ],
+        "sistema": "Sistema Neumático y Eléctrico"
+    },
+    {
+        "falla": "Falla en el sistema de enfriamiento",
+        "causas_posibles": [
+            "Bomba de enfriamiento defectuosa",
+            "Fugas en las líneas de agua",
+            "Falta de presión de agua",
+            "Filtro obstruido"
+        ],
+        "soluciones": [
+            "Reemplazar la bomba de enfriamiento",
+            "Reparar fugas en las líneas de agua",
+            "Verificar y restaurar la presión de agua",
+            "Limpiar o reemplazar el filtro"
+        ],
+        "maquinas_aplicables": [
+            "Arburg 320 S",
+            "KraussMaffei KM 65-160 CX"
+        ],
+        "sistema": "Sistema de Enfriamiento"
+    }
+]
