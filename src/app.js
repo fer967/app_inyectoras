@@ -57,7 +57,7 @@ const requireAuth = (req, res, next) => {
     }
 };
 
-// Rutas
+
 app.use('/auth', authRoutes); 
 app.use('/consultar', requireAuth, routes); 
 app.get('/', (req, res) => {
