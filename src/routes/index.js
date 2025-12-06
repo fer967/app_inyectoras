@@ -3,34 +3,28 @@ const router = express.Router();
 const { Inyectora } = require('../models/database.js');
 const { Op } = require("sequelize");
 const apiKey = process.env.GEMINI_API_KEY;
-const fs = require('fs');
-const path = require('path');
-const fallasData = require('../fallas.json');
 const moment = require('moment');
-
 
 router.get('/', (req, res) => {
     res.render('index');
 });
 
-
 router.get('/ingresar-reparacion', (req, res) => {
     res.render('ingresar_reparacion');
 });
 
-
 router.post('/ingresar-reparacion', async (req, res) => {
-    const { marca, modelo, falla, reparacion_realizada, operario_nombre, operario_apellido, fecha } = req.body;
-    console.log('Datos recibidos en el formulario de ingreso de reparacion:', req.body);
+    const { marca, modelo, falla, sistema, reparacion_realizada, operario_nombre, operario_apellido, fecha } = req.body;
     try {
         const nuevaReparacion = await Inyectora.create({
-            marca: marca,
-            modelo: modelo,
-            falla: falla,
-            reparacion_realizada: reparacion_realizada,
-            operario_nombre: operario_nombre,
-            operario_apellido: operario_apellido,
-            fecha: fecha
+            marca,
+            modelo,
+            falla,
+            sistema,
+            reparacion_realizada,
+            operario_nombre,
+            operario_apellido,
+            fecha
         });
         console.log('Reparación registrada:', nuevaReparacion.id);
         res.redirect('/consultar');
@@ -41,225 +35,116 @@ router.post('/ingresar-reparacion', async (req, res) => {
 });
 
 
-async function generarConsultaSQL(pregunta) {
-    try {
-        // 1. Buscar la falla en el archivo fallas.json
-        const fallaEncontrada = buscarFallaEnJSON(pregunta);
-        if (fallaEncontrada) {
-            //console.log('Falla encontrada en el archivo JSON:', fallaEncontrada);
-            // **CONSTRUIR LA CONSULTA SEQUELIZE BASÁNDOSE EN LA INFORMACIÓN DE LA FALLA**
-            const whereClause = {
-                falla: fallaEncontrada.falla
-            };
-            // **AGREGAR FILTROS ADICIONALES SI ES NECESARIO (POR EJEMPLO, MARCA, MODELO)**
-            if (pregunta.includes("Arburg") && pregunta.includes("270 S")) {
-                whereClause.marca = 'Arburg';
-                whereClause.modelo = '270 S';
-            }
-            const consultaSequelize = { where: whereClause };
-            //console.log('Consulta Sequelize generada a partir del archivo JSON:', consultaSequelize);
-            return consultaSequelize;
+function detectarSistema(texto) {
+    if (!texto) return null;
+    const t = texto
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    const sistemas = {
+        hidraulico: ["hidraulico", "hidraulica", "aceite", "presion"],
+        electrico: ["electrico", "electrica", "cable", "sensor", "plc"],
+        mecanico: ["mecanico", "rotura", "pieza", "engrane"],
+        refrigeracion: ["refrigeracion", "enfriamiento", "chiller"],
+        calefaccion: ["calefaccion", "calor", "resistencia"],
+        inyeccion: ["inyeccion", "inyecta", "plastico", "material"]
+    };
+    for (let sistema in sistemas) {
+        if (sistemas[sistema].some(p => t.includes(p))) {
+            return sistema;
         }
-        // 2. Si no se encuentra la falla en el archivo JSON, generar la consulta Sequelize
-        // (Código existente para generar la consulta Sequelize)
-        const geminiResponse = { candidates: [{ content: { parts: [{ text: pregunta }] } }] };
-        if (!geminiResponse || typeof geminiResponse !== 'object') {
-            console.error('La respuesta de Gemini es nula o no es un objeto:', geminiResponse);
-            return null;
-        }
-        if (!geminiResponse.candidates || !Array.isArray(geminiResponse.candidates)) {
-            console.error('La respuesta de Gemini no contiene la propiedad candidates o no es un array:', geminiResponse);
-            return null;
-        }
-        if (geminiResponse.candidates.length === 0) {
-            console.error('El array candidates está vacío:', geminiResponse);
-            return null;
-        }
-        const respuesta = geminiResponse.candidates[0].content.parts[0].text;
-        let marca = null;
-        let modelo = null;
-        let fechaInicio = null;
-        let fechaFin = null;
-        let operarioNombre = null;
-        let operarioApellido = null;
-        if (pregunta.includes("Arburg") && pregunta.includes("270 S")) {
-            marca = 'Arburg';
-            modelo = '270 S';
-        }
-        if (pregunta.includes("semana pasada")) {
-            fechaInicio = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
-            fechaFin = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-        }
-        if (pregunta.includes("Juan") && pregunta.includes("Perez")) {
-            operarioNombre = 'Juan';
-            operarioApellido = 'Perez';
-        }
-        const whereClause = {};
-        if (marca) {
-            whereClause.marca = marca;
-        }
-        if (modelo) {
-            whereClause.modelo = modelo;
-        }
-        if (fechaInicio && fechaFin) {
-            whereClause.fecha = {
-                [Op.between]: [fechaInicio, fechaFin]
-            };
-        }
-        if (operarioNombre && operarioApellido) {
-            whereClause.operario_nombre = operarioNombre;
-            whereClause.operario_apellido = operarioApellido;
-        }
-        const consultaSequelize = { where: whereClause };
-        console.log('Consulta Sequelize generada a partir del análisis de la pregunta:', consultaSequelize);
-        return consultaSequelize;
-    } catch (error) {
-        console.error('Error al generar la consulta Sequelize:', error);
-        return null;
     }
+    return null;
 }
 
-function buscarFallaEnJSON(pregunta) {
-    const stopWords = ["en", "de", "la", "el", "y", "a", "con", "para", "por"]; // Lista de palabras clave comunes
-    const preguntaLower = pregunta.toLowerCase();
-    const preguntaPalabras = preguntaLower.split(/[\s\W]+/).filter(Boolean).filter(palabra => !stopWords.includes(palabra)); // Divide la pregunta en palabras y elimina las palabras clave comunes
-    for (const falla of fallasData) {
-        const fallaLower = falla.falla.toLowerCase();
-        const fallaPalabras = fallaLower.split(/[\s\W]+/).filter(Boolean).filter(palabra => !stopWords.includes(palabra)); // Divide la descripción de la falla en palabras y elimina las palabras clave comunes
-        let coincidencias = 0;
-        fallaPalabras.forEach(palabra => {
-            if (preguntaPalabras.includes(palabra)) {
-                coincidencias++;
-            }
-        });
-        // Verificar si hay una cantidad mínima de coincidencias
-        if (fallaPalabras.length > 0) {
-            const porcentajeCoincidencia = coincidencias / fallaPalabras.length;
-            if (porcentajeCoincidencia >= 0.5) { // 50% de coincidencia
-                //console.log('Falla encontrada:', falla.falla); // RASTREO
-                return falla; // Retorna el objeto de la falla si se encuentra
-            }
-        }
+
+function detectarMarca(texto) {
+    const t = texto.toLowerCase();
+    const marcas = [
+        "haitai",
+        "haida",
+        "arburg",
+        "engel",
+        "haitian",
+        "sumitomo",
+        "krauss",
+        "demag",
+        "nissei"
+    ];
+    for (let m of marcas) {
+        if (t.includes(m)) return m;
     }
-    return null; // No se encontró la falla en el archivo JSON local
+    return null;
 }
+
+
+function detectarModelo(texto) {
+    const t = texto.toUpperCase();
+    const match = t.match(/\b(\d{2,3})[\s\-]*([A-Z])\b/);
+    if (!match) return null;
+    const numero = match[1];  
+    const letra = match[2];   
+    return `${numero} ${letra}`;  
+}
+
+
+async function generarConsultaSistemaModelo(texto) {
+    const sistema = detectarSistema(texto);
+    const modelo = detectarModelo(texto);
+    const marca = detectarMarca(texto);
+    console.log("🔍 Sistema detectado:", sistema);
+    console.log("🔍 Modelo detectado:", modelo);
+    console.log("🔍 Marca detectada:", marca);
+    if (!sistema && !modelo && !marca) return null;
+    const where = {};
+    if (sistema) where.sistema = { [Op.iLike]: `%${sistema}%` };
+    if (modelo) where.modelo = { [Op.iLike]: `%${modelo}%` };
+    if (marca) where.marca = { [Op.iLike]: `%${marca}%` };
+    return { where };
+}
+
 
 async function consultarGemini(pregunta) {
     try {
-        // 1. Buscar la falla en el archivo JSON local
-        const fallaEncontrada = buscarFallaEnJSON(pregunta);
-        if (fallaEncontrada) {
-            console.log('Respuesta encontrada en el archivo JSON local.');
-            //Formateo
-            const respuestaFormateada = `Posibles causas: ${fallaEncontrada.causas_posibles.join(", ")}. Soluciones: ${fallaEncontrada.soluciones.join(", ")}. Sistema: ${fallaEncontrada.sistema}. Máquinas aplicables: ${fallaEncontrada.maquinas_aplicables.join(", ")}.`;
-            return { candidates: [{ content: { parts: [{ text: respuestaFormateada }] } }] }; // Formatea la respuesta para que coincida con la API de Gemini
-        }
-        // 2. Si no se encuentra la respuesta en el archivo JSON local, consultar la API de Gemini
-        const fetch = (await import('node-fetch')).default; // Importación dinámica de node-fetch
+        const fetch = (await import('node-fetch')).default;
         const apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + apiKey;
         const response = await fetch(apiUrl, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                contents: [{
-                    parts: [{ text: pregunta }]
-                }]
+                contents: [{ parts: [{ text: pregunta }] }]
             })
         });
         if (!response.ok) {
-            console.error(" ERROR en consultarGemini: response.ok es false"); // RASTREO
-            throw new Error(`Error al consultar la API de Gemini: ${response.status} - ${response.statusText}`);
+            console.error("ERROR en consultarGemini: response.ok false");
+            throw new Error(`Error Gemini: ${response.status}`);
         }
-        const data = await response.json();
-        return data; // Devuelve la respuesta completa de Gemini
+        return await response.json();
     } catch (error) {
-        console.error('Error al consultar la API de Gemini:', error);
-        console.log("*** consultarGemini RETORNANDO objeto de error:", { error: 'Error al consultar Gemini API' }); // RASTREO
-        return { error: 'Error al consultar Gemini API' }; // Devuelve un objeto con un error
+        console.error('Error al consultar Gemini:', error);
+        return { error: 'Error al consultar Gemini API' };
     }
 }
 
-
-function procesarEstadisticas(resultados) {
-    const fallasPorMarca = {};
-    resultados.forEach(resultado => {
-        console.log('procesando resultado:', JSON.stringify(resultado));
-        if (fallasPorMarca[resultado.marca]) {
-            fallasPorMarca[resultado.marca]++;
-        } else {
-            fallasPorMarca[resultado.marca] = 1;
-        }
-    });
-    return {
-        fallasPorMarca: fallasPorMarca
-    };
-}
-
-
-async function generarDashboard(req, res) {
-    try {
-        // 1. Obtener los datos de fallas de la última semana
-        //const fechaInicio = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-        //const fechaFin = new Date();
-        const fechaInicio = moment('2025-03-11', 'YYYY-MM-DD').format('YYYY-MM-DD HH:mm:ss');
-        const fechaFin = moment('2025-03-14', 'YYYY-MM-DD').format('YYYY-MM-DD HH:mm:ss');
-        console.log('Fecha de inicio:', fechaInicio);
-        console.log('Fecha de fin:', fechaFin);
-        const resultados = await Inyectora.findAll({
-            where: {
-                fecha: {
-                    [Op.between]: [fechaInicio, fechaFin]
-                }
-            }
-        });
-        console.log('Verificando consulta a la Base de Datos: ', JSON.stringify(resultados));
-        // **CONVERTIR LOS OBJETOS A OBJETOS SIMPLES**
-        const resultadosPlain = resultados.map(resultado => resultado.get({ plain: true }));
-        // 2. Procesar los datos para obtener las estadísticas necesarias
-        //console.log('Resultados para procesarEstadisticas:', JSON.stringify(resultadosPlain));
-        const estadisticas = procesarEstadisticas(resultadosPlain); // Implementar la función procesarEstadisticas
-        // **3. Enviar los datos al frontend para que se genere el gráfico con ApexCharts**
-        console.log('Estadísticas para el dashboard:', JSON.stringify(estadisticas));  // ver si hay datos
-        res.render('dashboard', { estadisticas: JSON.stringify(estadisticas) }); // Enviar las estadísticas como JSON
-    } catch (error) {
-        console.error('Error al generar el dashboard:', error);
-        res.status(500).send('Error al generar el dashboard');
-    }
-}
 
 router.post('/', async (req, res) => {
-    const pregunta = req.body.pregunta;
-    console.log('Pregunta recibida:', pregunta);
+    const pregunta = req.body.pregunta_bot || req.body.pregunta;
     try {
-        // 1. Consultar Gemini
         const geminiResponse = await consultarGemini(pregunta);
-        // **ANALIZAR LA RESPUESTA DE GEMINI PARA DETERMINAR LA INTENCIÓN**
         const intencion = analizarIntencion(geminiResponse);
         if (intencion === 'generar_dashboard') {
-            generarDashboard(req, res);
-        } else {
-            // 2. Generar la consulta Sequelize
-            const consultaSequelize = await generarConsultaSQL(pregunta, geminiResponse);
-            if (consultaSequelize) {
-                console.log('Consulta Sequelize generada:', consultaSequelize);
-                // 3. Ejecutar la consulta con Sequelize
-                const resultados = await Inyectora.findAll(consultaSequelize);
-                // CONVERTIR LOS OBJETOS A OBJETOS SIMPLES
-                const resultadosPlain = resultados.map(resultado => resultado.get({ plain: true }));
-                // Renderizar la vista de resultados (la tabla)
-                res.render('resultados', { resultados: resultadosPlain });
-                // Renderizar la vista de la respuesta del bot (geminiResponse)
-                res.render('respuesta_bot', { geminiResponse: geminiResponse.candidates[0].content.parts[0].text });
-            } else {
-                console.log('No se pudo generar una consulta para la pregunta:', pregunta);
-                res.render('resultados', { resultados: null });
-                res.render('respuesta_bot', { geminiResponse: "No se pudo procesar la pregunta." });
-            }
+            return generarDashboard(req, res);
         }
+        const consultaSequelize = await generarConsultaSQL(pregunta);
+        if (!consultaSequelize) {
+            console.log('No se pudo generar consulta SQL');
+            return res.render('resultados', { resultados: null });
+        }
+        const resultados = await Inyectora.findAll(consultaSequelize);
+        const plain = resultados.map(r => r.get({ plain: true }));
+        res.render('resultados', { resultados: plain });
     } catch (error) {
-        console.error('Error al procesar la consulta:', error);
+        console.error('Error al procesar consulta:', error);
         res.status(500).send('Error al procesar la consulta');
     }
 });
@@ -267,49 +152,75 @@ router.post('/', async (req, res) => {
 
 router.post('/mostrar-reparaciones', async (req, res) => {
     try {
-        // Consulta para obtener todos los registros de la tabla inyectoras
         const resultados = await Inyectora.findAll();
-        // CONVERTIR LOS OBJETOS A OBJETOS SIMPLES
-        const resultadosPlain = resultados.map(resultado => resultado.get({ plain: true }));
-        // Renderizar la vista de resultados (la tabla)
-        res.render('resultados', { resultados: resultadosPlain });
+        res.render('resultados', { resultados: resultados.map(r => r.get({ plain: true })) });
     } catch (error) {
-        console.error('Error al obtener todas las reparaciones:', error);
-        res.status(500).send('Error al obtener todas las reparaciones');
+        console.error('Error obtener reparaciones:', error);
+        res.status(500).send('Error al obtener reparaciones');
     }
 });
 
-router.post('/consultar-bot', async (req, res) => {
-    const pregunta = req.body.pregunta_bot;
-    //console.log('Pregunta al Bot recibida:', pregunta);
-    try {
-        // 1. Consultar Gemini (primero busca en fallas.json)
-        const geminiResponse = await consultarGemini(pregunta);
-        // Verificar si geminiResponse tiene contenido
-        if (geminiResponse && geminiResponse.candidates && geminiResponse.candidates[0] && geminiResponse.candidates[0].content && geminiResponse.candidates[0].content.parts && geminiResponse.candidates[0].content.parts[0] && geminiResponse.candidates[0].content.parts[0].text) {
-            res.render('respuesta_bot', { geminiResponse: geminiResponse.candidates[0].content.parts[0].text }); // vista respuesta_bot
-        } else {
-            res.render('respuesta_bot', { geminiResponse: "No se pudo obtener una respuesta." });
+
+function quiereJSON(req) {
+    return req.xhr || req.headers.accept?.includes("application/json");
+}
+
+
+router.post("/consultar-bot", async (req, res) => {
+    const preguntaBD = req.body.pregunta_bd;
+    const preguntaIA = req.body.pregunta_ia;
+    if (preguntaIA) {
+        console.log("🤖 Consulta IA:", preguntaIA);
+        const respuestaIA = await consultarGemini(preguntaIA);
+        return res.render("resultados_bot", {
+            origen: "IA",
+            respuestaIA
+        });
+    }
+    if (preguntaBD) {
+        console.log("🛠 Consulta BD:", preguntaBD);
+        const consulta = await generarConsultaSistemaModelo(preguntaBD);
+        if (!consulta) {
+            return res.render("resultados_bot", {
+                origen: "BD",
+                resultados: [],
+                mensaje: "Debe indicar al menos marca, modelo o sistema."
+            });
         }
-    } catch (error) {
-        console.error('Error al consultar Gemini:', error);
-        res.status(500).send('Error al consultar Gemini');
+        const resultados = await Inyectora.findAll(consulta);
+        if (resultados.length === 0) {
+            return res.render("resultados_bot", {
+                origen: "BD",
+                resultados: [],
+                mensaje: "No se encontraron fallas para ese sistema y modelo."
+            });
+        }
+        return res.render("resultados_bot", {
+            origen: "BD",
+            resultados: resultados.map(r => r.get({ plain: true }))
+        });
     }
+    return res.render("resultados_bot", {
+        origen: "ERROR",
+        mensaje: "No se recibió ninguna consulta."
+    });
 });
-
-
 
 
 function analizarIntencion(geminiResponse) {
-    const textoRespuesta = geminiResponse.candidates[0].content.parts[0].text;
-    if (textoRespuesta.toLowerCase().includes('dashboard')) {
-        return 'generar_dashboard';
-    } else {
-        return 'consultar_datos';
-    }
+    const texto = geminiResponse.candidates[0].content.parts[0].text.toLowerCase();
+    return texto.includes('dashboard') ? 'generar_dashboard' : 'consultar_datos';
 }
 
 module.exports = router;
+
+
+
+
+
+
+
+
 
 
 

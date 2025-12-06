@@ -6,6 +6,7 @@
             <th>Marca</th>
             <th>Modelo</th>
             <th>Falla</th>
+            <th>Sistema</th>
             <th>Reparacion_realizada</th>
             <th>Fecha</th>
         </tr>
@@ -16,6 +17,7 @@
             <td>{{marca}}</td>
             <td>{{modelo}}</td>
             <td>{{falla}}</td>
+            <td>{{sistema}}</td>
             <td>{{reparacion_realizada}}</td>
             <td>{{formatDate fecha "DD/MM/YYYY"}}</td>
         </tr>
@@ -25,9 +27,9 @@
 {{else}}
 <p>No se encontraron resultados.</p>
 {{/if}}
-
-<a href="/consultar">Volver a Inicio</a>
 <br>
+<a href="/consultar">Volver a Inicio</a>
+<br><br>
 <a href="/auth/logout">cerrar sesion</a>
 
 

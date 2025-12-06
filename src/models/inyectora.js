@@ -11,6 +11,10 @@ module.exports = (sequelize, DataTypes) => {
         falla: {
             type: DataTypes.TEXT,
         },
+        sistema: {
+            type: DataTypes.TEXT,
+            allowNull: false,
+        },
         reparacion_realizada: {
             type: DataTypes.TEXT,
         },
@@ -27,9 +31,9 @@ module.exports = (sequelize, DataTypes) => {
             allowNull: false,
         },
     }, {
-        tableName: 'inyectoras', // Especifica el nombre de la tabla
-        timestamps: false, // true Agrega createdAt y updatedAt
-        underscored: true // Usa nombres con guiones bajos
+        tableName: 'inyectoras', 
+        timestamps: false, 
+        underscored: true 
     });
     return Inyectora;
 };

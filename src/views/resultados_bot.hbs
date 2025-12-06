@@ -1,0 +1,43 @@
+<h1>Resultados de la Consulta</h1>
+
+{{#if mensaje}}
+<div class="alert alert-warning">{{mensaje}}</div>
+{{/if}}
+
+{{#if resultados}}
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Marca</th>
+            <th>Modelo</th>
+            <th>Sistema</th>
+            <th>Falla</th>
+            <th>Reparación</th>
+            <th>Operario</th>
+            <th>Fecha</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{#each resultados}}
+        <tr>
+            <td>{{marca}}</td>
+            <td>{{modelo}}</td>
+            <td>{{sistema}}</td>
+            <td>{{falla}}</td>
+            <td>{{reparacion_realizada}}</td>
+            <td>{{operario_nombre}} {{operario_apellido}}</td>
+            <td>{{fecha}}</td>
+        </tr>
+        {{/each}}
+    </tbody>
+</table>
+{{/if}}
+
+{{#if respuestaIA}}
+<h3>Respuesta de la IA</h3>
+<div class="alert alert-info">
+    {{{respuestaIA.candidates.[0].content.parts.[0].text}}}
+</div>
+{{/if}}
+
+<a href="/consultar">Volver</a>
