@@ -1,0 +1,39 @@
+<h1>Mis Tareas Asignadas</h1>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Título</th>
+            <th>Descripción</th>
+            <th>Estado</th>
+            <th>Inicio</th>
+            <th>Fin</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{#each tareas}}
+        <tr>
+            <td>{{titulo}}</td>
+            <td>{{descripcion}}</td>
+            <td>{{estado}}</td>
+            <td>{{hora_inicio}}</td>
+            <td>{{hora_fin}}</td>
+            <td>
+                {{#if (eq estado "pendiente")}}
+                    <form action="/tareas/iniciar/{{id}}" method="POST">
+                        <button class="btn btn-primary">Iniciar</button>
+                    </form>
+                {{/if}}
+                {{#if (eq estado "en_progreso")}}
+                    <form action="/tareas/finalizar/{{id}}" method="POST">
+                        <button class="btn btn-success">Finalizar</button>
+                    </form>
+                {{/if}}
+            </td>
+        </tr>
+        {{/each}}
+    </tbody>
+</table>
+
+<a href="/consultar">Volver</a>

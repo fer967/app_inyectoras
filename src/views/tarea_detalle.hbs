@@ -1,0 +1,49 @@
+<h1>Detalle de la Tarea</h1>
+
+<div class="card mt-3 p-3">
+    <h3>{{tarea.titulo}}</h3>
+    <p><strong>Descripción:</strong> {{tarea.descripcion}}</p>
+    <p><strong>Asignada a:</strong> {{tecnico.nombre}} {{tecnico.apellido}}</p>
+    <p><strong>Estado:</strong> 
+        <span class="badge bg-info text-dark">{{tarea.estado}}</span>
+    </p>
+    <p><strong>Hora de comienzo:</strong>
+        {{#if tarea.hora_inicio}}
+            {{formatDate tarea.hora_inicio "DD/MM/YYYY HH:mm"}}
+        {{else}}
+            No registrada
+        {{/if}}
+    </p>
+    <p><strong>Hora de finalización:</strong>
+        {{#if tarea.hora_fin}}
+            {{formatDate tarea.hora_fin "DD/MM/YYYY HH:mm"}}
+        {{else}}
+            Aún sin finalizar
+        {{/if}}
+    </p>
+    <p><strong>Total horas:</strong>
+        {{#if tarea.horas_totales}}
+        {{tarea.horas_totales}} hs
+        {{else}}
+            -
+        {{/if}}
+    </p>
+</div>
+<hr>
+{{!-- Si la tarea aún está en progreso mostramos el formulario --}}
+{{#if (eq tarea.estado "en_progreso")}}
+<form action="/consultar/tareas/finalizar/{{tarea.id}}" method="POST" class="mt-4">
+    <div class="form-group mb-3">
+        <label for="detalle_finalizacion"><strong>Detalle final de la tarea:</strong></label>
+        <textarea name="detalle_finalizacion" id="detalle_finalizacion"
+            class="form-control" rows="3" required></textarea>
+    </div>
+    <button type="submit" class="btn btn-success">
+        Finalizar Tarea
+    </button>
+</form>
+{{else}}
+<p class="alert alert-success mt-4">Esta tarea ya fue finalizada.</p>
+{{/if}}
+<br>
+<a href="/consultar/tareas" class="btn btn-secondary">Volver</a>

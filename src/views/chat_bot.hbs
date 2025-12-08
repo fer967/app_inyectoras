@@ -1,0 +1,99 @@
+<h1 class="text-center">Chat del Bot</h1>
+
+<style>
+    .chat-container {
+        max-width: 650px;
+        margin: auto;
+        border: 1px solid #ccc;
+        border-radius: 10px;
+        padding: 15px;
+        background: #f5f5f5;
+    }
+    #chat-window {
+        height: 400px;
+        overflow-y: auto;
+        padding: 10px;
+        background: white;
+        border-radius: 10px;
+        border: 1px solid #ddd;
+    }
+    .msg {
+        max-width: 80%;
+        padding: 10px 14px;
+        margin: 8px 0;
+        border-radius: 12px;
+        font-size: 16px;
+    }
+    .msg-user {
+        background: #d1e7ff;
+        margin-left: auto;
+        text-align: right;
+        border-bottom-right-radius: 2px;
+    }
+    .msg-bot {
+        background: #e8e8e8;
+        margin-right: auto;
+        border-bottom-left-radius: 2px;
+    }
+    .input-area {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+    }
+</style>
+
+<div class="chat-container">
+    <div id="chat-window"></div>
+    <div class="input-area">
+        <input type="text" id="mensaje" class="form-control" placeholder="Escribe tu mensaje..." required>
+        <button class="btn btn-primary" id="btnEnviar">Enviar</button>
+    </div>
+</div>
+
+<script>
+    document.getElementById("btnEnviar").addEventListener("click", enviarMensaje);
+    document.getElementById("mensaje").addEventListener("keypress", (e) => {
+        if (e.key === "Enter") enviarMensaje();
+    });
+    function agregarMensaje(texto, tipo) {
+        const chat = document.getElementById("chat-window");
+        const div = document.createElement("div");
+        div.classList.add("msg", tipo === "user" ? "msg-user" : "msg-bot");
+        div.innerHTML = texto;
+        chat.appendChild(div);
+        chat.scrollTop = chat.scrollHeight;
+    }
+    async function enviarMensaje() {
+        const input = document.getElementById("mensaje");
+        const mensaje = input.value.trim();
+        if (!mensaje) return;
+        agregarMensaje(mensaje, "user");
+        input.value = "";
+        // Mostrar indicador de "escribiendo..."
+        agregarMensaje("Escribiendo...", "bot");
+        const bubbles = document.querySelectorAll(".msg-bot");
+        const typingBubble = bubbles[bubbles.length - 1];
+        try {
+            const resp = await fetch("/consultar/chat-bot", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ mensaje })
+            });
+            const data = await resp.json();
+            typingBubble.remove(); // saco el "escribiendo..."
+            agregarMensaje(data.respuesta || "No entendí la consulta.", "bot");
+        } catch (err) {
+            typingBubble.remove();
+            agregarMensaje("❌ Error al conectar con el servidor.", "bot");
+            console.error(err);
+        }
+    }
+</script>
+<br>
+<a href="/consultar">Volver</a>
+
+
+
+
+
+

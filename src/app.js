@@ -11,11 +11,17 @@ const { sequelize } = require('./models/database.js');
 const helpers = require('./helpers.js');
 const app = express();
 const port = process.env.PORT || 8000;
+const requireAuth = require('./middleware/auth.js');
 
 app.engine('hbs', engine({
     defaultLayout: 'main',
     extname: '.hbs',
-    helpers: helpers
+    helpers: helpers,
+    runtimeOptions: {
+        // permite acceso a propiedades en prototipos (quita la advertencia)
+        allowProtoPropertiesByDefault: true,
+        allowProtoMethodsByDefault: true
+    }
 }));
 
 app.set('view engine', 'hbs');
@@ -41,15 +47,6 @@ app.use(session({
         maxAge: 30 * 60 * 1000 
     }
 }));
-
-const requireAuth = (req, res, next) => {
-    console.log('requireAuth: req.session.tecnicoId =', req.session.tecnicoId); 
-    if (req.session.tecnicoId) {
-        next();
-    } else {
-        res.redirect('/auth/login'); 
-    }
-};
 
 app.use('/auth', authRoutes); 
 app.use('/consultar', requireAuth, routes); 

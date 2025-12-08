@@ -1,0 +1,42 @@
+<h1>Crear nueva tarea</h1>
+
+<form action="/consultar/tareas/crear" method="POST">
+    <div class="form-group d-flex flex-column gap-3">
+        <label>Título:</label>
+        <input type="text" name="titulo" required>
+        <br>
+        <label>Descripción:</label>
+        <textarea name="descripcion"></textarea>
+        <br>
+        <label>Prioridad:</label>
+        <select name="prioridad">
+            <option value="baja">Baja</option>
+            <option value="media" selected>Media</option>
+            <option value="alta">Alta</option>
+        </select>
+        <br>
+        <label>Especialidad requerida:</label>
+        <select name="especialidad_requerida">
+            <option value="mecanica">Mecanica</option>
+            <option value="hidraulica">Hidráulica</option>
+            <option value="electrica">Eléctricidad</option>
+            <option value="neumatica">Neumatica</option>
+        </select>
+        <br>
+        <label>Asignar técnico (opcional):</label>
+        <select name="tecnico_id">
+            <option value="">No asignar</option>
+            {{#each tecnicos}}
+            <option value="{{id}}">{{nombre}} ({{especialidad}})</option>
+            {{/each}}
+        </select>
+        <br>
+        <label>Fecha límite:</label>
+        <input type="datetime-local" name="fecha_limite">
+        <br>
+        <button type="submit">Crear Tarea</button>
+    </div>
+</form>
+<a href="/consultar/tareas" class="btn btn-secondary mt-3">Ver tareas</a>
+<br>
+<a href="/consultar" class="btn btn-secondary mt-3">Inicio</a>

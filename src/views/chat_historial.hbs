@@ -1,0 +1,39 @@
+<h1>Historial del Chat</h1>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Fecha</th>
+            <th>Mensaje</th>
+            <th>Respuesta</th>
+            <th>Origen</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{#each historial}}
+        <tr>
+            <td>{{created_at_formateado}}</td>
+            <td>{{mensaje_usuario}}</td>
+            <td>
+                <pre>{{jsonPretty respuesta_bot}}</pre>
+            </td>
+            <td>
+                {{#if (eq origen "BD")}}
+                    <span class="badge bg-primary">Base de Datos</span>
+                {{else}}
+                    <span class="badge bg-success">IA</span>
+                {{/if}}
+            </td>
+        </tr>
+        {{/each}}
+    </tbody>
+</table>
+<a href="/consultar/chat-bot" class="btn btn-secondary mt-3">
+    Volver al Chat
+</a>
+
+
+
+
+
+
