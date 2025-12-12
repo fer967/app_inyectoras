@@ -1,3 +1,10 @@
+{{!-- <form action="/consultar/tareas/finalizar/{{tarea.id}}" method="POST">
+    <input type="hidden" name="redirigir_a_reparacion" value="1">
+    <button type="submit" class="btn btn-success">
+        Finalizar Tarea
+    </button>
+</form> --}}
+
 <h1>Detalle de la Tarea</h1>
 
 <div class="card mt-3 p-3">
@@ -22,8 +29,8 @@
         {{/if}}
     </p>
     <p><strong>Total horas:</strong>
-        {{#if tarea.horas_totales}}
-        {{tarea.horas_totales}} hs
+        {{#if tarea.total_horas}}
+            {{tarea.total_horas}} hs
         {{else}}
             -
         {{/if}}
@@ -33,11 +40,12 @@
 {{!-- Si la tarea aún está en progreso mostramos el formulario --}}
 {{#if (eq tarea.estado "en_progreso")}}
 <form action="/consultar/tareas/finalizar/{{tarea.id}}" method="POST" class="mt-4">
-    <div class="form-group mb-3">
+<input type="hidden" name="redirigir_a_reparacion" value="1">
+    {{!-- <div class="form-group mb-3">
         <label for="detalle_finalizacion"><strong>Detalle final de la tarea:</strong></label>
         <textarea name="detalle_finalizacion" id="detalle_finalizacion"
             class="form-control" rows="3" required></textarea>
-    </div>
+    </div> --}}
     <button type="submit" class="btn btn-success">
         Finalizar Tarea
     </button>
@@ -45,5 +53,13 @@
 {{else}}
 <p class="alert alert-success mt-4">Esta tarea ya fue finalizada.</p>
 {{/if}}
+
 <br>
 <a href="/consultar/tareas" class="btn btn-secondary">Volver</a>
+
+
+
+
+
+
+

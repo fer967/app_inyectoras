@@ -1,7 +1,5 @@
 <h1>App de Mantenimiento</h1>
 <br>
-<h3>Consultas</h3>
-<br>
 <form action="/consultar/mostrar-reparaciones" method="post">
     <button type="submit" class="btn btn-primary">Mostrar reparaciones realizadas</button>
 </form>
@@ -13,20 +11,19 @@
         <input type="text" class="form-control" id="pregunta_bd" name="pregunta_bd"
             placeholder="Ej: Arburg 270 S hidráulico">
     </div>
-    <button type="submit" class="btn btn-info">Buscar en BD</button>
+    <button type="submit" class="btn btn-primary">Buscar en BD</button>
 </form>
-<br>
-<a href="/consultar/tareas" class="btn btn-warning">Ver Tareas</a>
 <br><br>
-<a href="/consultar/tareas/crear" class="btn btn-primary">Crear Nueva Tarea</a>
+<a href="/consultar/tareas" class="btn btn-success" >Ver Tareas</a>
+<a href="/consultar/tareas/crear" class="btn btn-success" >Crear Nueva Tarea</a>
 <br><br>
-<a href="/consultar/chat-historial" class="btn btn-secondary">Historial del Chat</a>
-<br><br>
+<a href="/consultar/chat-historial" class="btn btn-success" >Historial del Chat</a>
 <a href="/consultar/chat-bot" class="btn btn-success">Abrir Chat del Bot</a>
 <br><br>
-<a href="/consultar/ingresar-reparacion">Ingresar Nueva Reparación</a>
-<br>
-<a href="/auth/logout">cerrar sesion</a>
+<a href="/consultar/tecnicos-online" class="btn btn-success">Lista de tecnicos conectados</a>
+<a href="/consultar/ingresar-reparacion" class="btn btn-success">Ingresar reparacion</a>
+<br><br><br>
+<a href="/auth/logout" class="btn btn-primary">Cerrar sesion</a>
 
 
 

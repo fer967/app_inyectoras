@@ -1,0 +1,34 @@
+<h1>Técnicos Conectados</h1>
+
+<ul id="lista-tecnicos" class="list-group mb-3"></ul>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const lista = document.getElementById("lista-tecnicos");
+    const socket = io();
+    // Cargar lista inicial desde API
+    fetch("/consultar/api/tecnicos-conectados")
+        .then(r => r.json())
+        .then(data => {
+            data.forEach(addOrUpdateTecnico);
+        });
+    function addOrUpdateTecnico(tecnico) {
+        const id = "t-" + tecnico.id;
+        let item = document.getElementById(id);
+        if (!item) {
+            item = document.createElement("li");
+            item.id = id;
+            item.className = "list-group-item";
+            lista.appendChild(item);
+        }
+        item.textContent = `${tecnico.nombre} ${tecnico.apellido} - ${tecnico.conectado ? "🟢 Online" : "🔴 Offline"}`;
+        if (!tecnico.conectado) {
+        setTimeout(() => item.remove(), 500);
+    }
+    }
+    // Evento en tiempo real
+    socket.on("tecnico_estado", (data) => {
+        addOrUpdateTecnico(data);
+    });
+</script>
+<a href="/consultar" class="btn btn-success">Inicio</a>

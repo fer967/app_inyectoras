@@ -11,8 +11,20 @@ router.get('/', (req, res) => {
     res.render('index');
 });
 
-router.get('/ingresar-reparacion', (req, res) => {
-    res.render('ingresar_reparacion');
+router.get("/ingresar-reparacion", requireAuth, async (req, res) => {
+    const { tarea_id } = req.query;
+    try {
+        const tarea = await Tarea.findByPk(tarea_id, {
+            include: [{ model: Tecnico, as: "tecnico" }]
+        });
+        if (!tarea) return res.status(404).send("Tarea no encontrada");
+        // Buscar la inyectora por separado
+        const inyectora = await Inyectora.findByPk(tarea.inyectora_id);
+        res.render("ingresar_reparacion", { tarea, inyectora });
+    } catch (error) {
+        console.error("Error cargando reparación:", error);
+        res.status(500).send("Error cargando el formulario");
+    }
 });
 
 router.get("/chat-bot", requireAuth, (req, res) => {
@@ -82,6 +94,23 @@ router.get("/tareas/:id", requireAuth, async (req, res) => {
     }
 });
 
+router.get("/api/tecnico-logueado", (req, res) => {
+    res.json({ tecnicoId: req.session.tecnicoId || null });
+});
+
+router.get("/api/tecnicos-conectados", async (req, res) => {
+    const tecnicos = await Tecnico.findAll({
+        where: { conectado: true },
+        attributes: ["id", "nombre", "apellido", "especialidad", "conectado"]
+    });
+    res.json(tecnicos);
+});
+
+router.get("/tecnicos-online", requireAuth, (req, res) => {
+    res.render("tecnicos_online");
+});
+
+
 router.post("/tareas/iniciar/:id", requireAuth, async (req, res) => {
     const { id } = req.params;
     const tarea = await Tarea.findByPk(id);
@@ -101,28 +130,29 @@ router.post("/tareas/iniciar/:id", requireAuth, async (req, res) => {
 
 router.post("/tareas/finalizar/:id", requireAuth, async (req, res) => {
     const { id } = req.params;
-    const { detalle_finalizacion } = req.body;
+    const { redirigir_a_reparacion } = req.body;
     try {
         const tarea = await Tarea.findByPk(id);
-        if (!tarea) {
-            return res.status(404).send("Tarea no encontrada");
+        if (!tarea) return res.status(404).send("Tarea no encontrada");
+        // 🔥 SI EL FINALIZADO ES AUTOMÁTICO → NO finalizamos acá
+        if (redirigir_a_reparacion === "1") {
+            //return res.redirect(`/consultar/ingresar-reparacion/${id}`);
+            return res.redirect(`/consultar/ingresar-reparacion?tarea_id=${id}`);   
         }
+        // ❗ SI NO ES AUTOMÁTICO, recién acá se finaliza
         const hora_fin = new Date();
         const horas = (hora_fin - tarea.hora_inicio) / (1000 * 60 * 60);
         await tarea.update({
             estado: "completada",
             hora_fin,
             horas_totales: horas.toFixed(2),
-            detalle_finalizacion
+            detalle_finalizacion: req.body.detalle_finalizacion
         });
-        // Marcar técnico como disponible de nuevo
-        if (tarea.tecnico_id) {
-            await Tecnico.update(
-                { disponible: true },
-                { where: { id: tarea.tecnico_id } }
-            );
-        }
-        res.redirect("/consultar/tareas/" + id);
+        await Tecnico.update(
+            { disponible: true },
+            { where: { id: tarea.tecnico_id } }
+        );
+        res.redirect(`/consultar/tareas/${id}`);
     } catch (error) {
         console.error("Error finalizando tarea:", error);
         res.status(500).send("Error");
@@ -162,6 +192,18 @@ router.post("/tareas/crear", requireAuth, async (req, res) => {
     }
 });
 
+async function asignarTecnicoAutomatico(especialidad) {
+    if (!especialidad) return null;
+    return await Tecnico.findOne({
+        where: {
+            especialidad: especialidad,
+            conectado: true,
+            disponible: true
+        },
+        order: [["updated_at", "DESC"]]
+    });
+}
+
 router.post("/chat-bot", requireAuth, async (req, res) => {
     const { mensaje } = req.body;
     const tecnicoId = req.session.tecnicoId;
@@ -177,26 +219,66 @@ router.post("/chat-bot", requireAuth, async (req, res) => {
             const resultados = await Inyectora.findAll(consulta);
             if (resultados.length > 0) {
                 origen = "BD";
-                // Convertimos los registros a objetos simples
                 const datos = resultados.map(r => r.get({ plain: true }));
-                // 🔹 Texto legible para enviar al frontend
                 respuestaTexto = datos.map(d =>
                     `Máquina: ${d.marca} ${d.modelo}
-                    Sistema: ${d.sistema}
-                    Falla: ${d.falla}
-                    Reparacion_realizada: ${d.reparacion_realizada}`
+Sistema: ${d.sistema}
+Falla: ${d.falla}
+Reparación: ${d.reparacion_realizada}`
                 ).join("\n\n---\n\n");
-                // 🔹 Datos originales para guardar en JSONB
                 respuestaParaGuardar = datos;
+                await HistorialChat.create({
+                    tecnico_id: tecnicoId,
+                    mensaje_usuario: mensaje,
+                    respuesta_bot: respuestaParaGuardar,
+                    origen
+                });
+                return res.json({ respuesta: respuestaTexto, origen });
             }
         }
-        if (!respuestaTexto) {
-            origen = "IA";
-            const respuestaIA = await consultarGemini(mensaje);
-            respuestaTexto =
-                respuestaIA?.candidates?.[0]?.content?.parts?.[0]?.text ||
-                "La IA no devolvió respuesta.";
-            respuestaParaGuardar = respuestaTexto; 
+        origen = "IA";
+        // IA responde
+        const respuestaIA = await consultarGemini(mensaje);
+        respuestaTexto =
+            respuestaIA?.candidates?.[0]?.content?.parts?.[0]?.text ||
+            "La IA no devolvió respuesta.";
+        respuestaParaGuardar = respuestaTexto;
+        const especialidadDetectada = detectarSistema(mensaje);
+        // Solo crear tarea si existe una especialidad real
+        let tareaCreada = null;
+        let tecnicoAsignado = null;
+        if (especialidadDetectada) {
+            // Buscar técnico disponible
+            tecnicoAsignado = await asignarTecnicoAutomatico(especialidadDetectada);
+            tareaCreada = await Tarea.create({
+                titulo: `Revisar sistema ${especialidadDetectada}`,
+                descripcion: mensaje,
+                estado: tecnicoAsignado ? "en_progreso" : "pendiente",
+                prioridad: "media",
+                especialidad_requerida: especialidadDetectada,
+                tecnico_id: tecnicoAsignado ? tecnicoAsignado.id : null,
+                hora_inicio: tecnicoAsignado ? new Date() : null
+            });
+            // Si asignó técnico → marcar como no disponible
+            if (tecnicoAsignado) {
+                console.log("🔧 Marcando técnico NO disponible:", tecnicoAsignado.id);
+                await Tecnico.update(
+                    { disponible: false },
+                    { where: { id: tecnicoAsignado.id } }
+                );
+            }
+            // Agregar información al mensaje que MOSTRARÁ el bot
+            if (tecnicoAsignado) {
+                respuestaTexto += `
+🛠 Se detectó que el problema es de *${especialidadDetectada}*.
+👨‍🔧 Tarea creada y asignada automáticamente al técnico:
+➡ ${tecnicoAsignado.nombre} ${tecnicoAsignado.apellido}.`;
+            } else {
+                respuestaTexto += `
+⚠ Problema detectado en sistema *${especialidadDetectada}*.
+❌ No hay técnicos disponibles ahora mismo.
+📌 La tarea quedó registrada como *pendiente*.`;
+            }
         }
         await HistorialChat.create({
             tecnico_id: tecnicoId,
@@ -211,24 +293,20 @@ router.post("/chat-bot", requireAuth, async (req, res) => {
     }
 });
 
-router.post('/ingresar-reparacion', async (req, res) => {
-    const { marca, modelo, falla, sistema, reparacion_realizada, operario_nombre, operario_apellido, fecha } = req.body;
+router.post("/ingresar-reparacion/:id", requireAuth, async (req, res) => {
     try {
-        const nuevaReparacion = await Inyectora.create({
-            marca,
-            modelo,
-            falla,
-            sistema,
-            reparacion_realizada,
-            operario_nombre,
-            operario_apellido,
-            fecha
-        });
-        console.log('Reparación registrada:', nuevaReparacion.id);
-        res.redirect('/consultar');
+        const tarea = await Tarea.findByPk(req.params.id);
+        if (!tarea) return res.status(404).send("Tarea no encontrada");
+        // ← Nombre correcto
+        tarea.detalle_finalizacion = req.body.reparacion_realizada;
+        // Marcar como completada
+        tarea.estado = "completada";
+        tarea.hora_fin = new Date();
+        await tarea.save();
+        res.redirect("/consultar/tareas");
     } catch (error) {
-        console.error('Error al registrar reparación:', error);
-        res.status(500).send('Error al registrar reparación');
+        console.error("Error guardando reparación:", error);
+        res.status(500).send("Error guardando la reparación");
     }
 });
 
@@ -239,12 +317,10 @@ function detectarSistema(texto) {
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "");
     const sistemas = {
-        hidraulico: ["hidraulico", "hidraulica", "aceite", "presion"],
-        electrico: ["electrico", "electrica", "cable", "sensor", "plc"],
-        mecanico: ["mecanico", "rotura", "pieza", "engrane"],
-        refrigeracion: ["refrigeracion", "enfriamiento", "chiller"],
-        calefaccion: ["calefaccion", "calor", "resistencia"],
-        inyeccion: ["inyeccion", "inyecta", "plastico", "material"]
+        Mecanica: ["mecanico", "rotura", "pieza", "engrane", "mecanica"],
+        Hidraulica: ["hidraulico", "hidraulica", "aceite", "presion"],
+        Neumatica: ["neumatico", "neumatica", "aire", "cilindro"],
+        Electricidad: ["electrico", "electrica", "cable", "sensor", "plc", "corriente"]
     };
     for (let sistema in sistemas) {
         if (sistemas[sistema].some(p => t.includes(p))) {
@@ -255,31 +331,40 @@ function detectarSistema(texto) {
 }
 
 function detectarMarca(texto) {
-    const t = texto.toLowerCase();
-    const marcas = [
-        "haitai",
-        "haida",
-        "arburg",
-        "engel",
-        "haitian",
-        "sumitomo",
-        "krauss",
-        "demag",
-        "nissei"
-    ];
-    for (let m of marcas) {
-        if (t.includes(m)) return m;
+    if (!texto) return null;
+    const t = texto
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    const marcas = {
+        haitai: ["haitai", "haitaii", "haitay"],
+        haitian: ["haitian", "haitan", "haiten"],
+        haida: ["haida"],
+        arburg: ["arburg", "arbug"],
+        engel: ["engel", "engle", "enguel"],
+        sumitomo: ["sumitomo", "sumitono"],
+        krauss: ["krauss", "kraus", "kraussmaffei", "kraus maffei"],
+        demag: ["demag", "demac"],
+        nissei: ["nissei", "nisei"]
+    };
+    for (let marca in marcas) {
+        if (marcas[marca].some(m => t.includes(m))) return marca;
     }
     return null;
 }
 
 function detectarModelo(texto) {
+    if (!texto) return null;
     const t = texto.toUpperCase();
-    const match = t.match(/\b(\d{2,3})[\s\-]*([A-Z])\b/);
-    if (!match) return null;
-    const numero = match[1];
-    const letra = match[2];
-    return `${numero} ${letra}`;
+    let match = t.match(/\b(\d{2,4})\/(\d{2,4})\b/);
+    if (match) {
+        return `${match[1]}/${match[2]}`;
+    }
+    match = t.match(/\b(\d{2,4})[\s\-]*([A-Z])\b/);
+    if (match) {
+        return `${match[1]} ${match[2]}`;
+    }
+    return null;
 }
 
 async function generarConsultaSistemaModelo(texto) {
@@ -300,7 +385,9 @@ async function generarConsultaSistemaModelo(texto) {
 async function consultarGemini(pregunta) {
     try {
         const fetch = (await import('node-fetch')).default;
-        const apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + apiKey;
+        const apiUrl =
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' +
+            apiKey;
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -309,37 +396,45 @@ async function consultarGemini(pregunta) {
             })
         });
         if (!response.ok) {
-            console.error("ERROR en consultarGemini: response.ok false");
+            console.error("ERROR en consultarGemini:", response.status);
+            // ⚠️ Manejo específico para el error 429
+            if (response.status === 429) {
+                return {
+                    candidates: [
+                        {
+                            content: {
+                                parts: [
+                                    {
+                                        text: "⚠️ La IA recibió demasiadas solicitudes. Intenta nuevamente en unos segundos."
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                };
+            }
             throw new Error(`Error Gemini: ${response.status}`);
         }
+        // OK → devolver JSON normal
         return await response.json();
     } catch (error) {
         console.error('Error al consultar Gemini:', error);
-        return { error: 'Error al consultar Gemini API' };
+        // ❌ Devuelve estructura compatible para evitar que falle tu router
+        return {
+            candidates: [
+                {
+                    content: {
+                        parts: [
+                            {
+                                text: "❌ No se pudo contactar a Gemini. Inténtalo más tarde."
+                            }
+                        ]
+                    }
+                }
+            ]
+        };
     }
 }
-
-router.post('/', async (req, res) => {
-    const pregunta = req.body.pregunta_bot || req.body.pregunta;
-    try {
-        const geminiResponse = await consultarGemini(pregunta);
-        const intencion = analizarIntencion(geminiResponse);
-        if (intencion === 'generar_dashboard') {
-            return generarDashboard(req, res);
-        }
-        const consultaSequelize = await generarConsultaSQL(pregunta);
-        if (!consultaSequelize) {
-            console.log('No se pudo generar consulta SQL');
-            return res.render('resultados', { resultados: null });
-        }
-        const resultados = await Inyectora.findAll(consultaSequelize);
-        const plain = resultados.map(r => r.get({ plain: true }));
-        res.render('resultados', { resultados: plain });
-    } catch (error) {
-        console.error('Error al procesar consulta:', error);
-        res.status(500).send('Error al procesar la consulta');
-    }
-});
 
 router.post('/mostrar-reparaciones', async (req, res) => {
     try {
@@ -350,10 +445,6 @@ router.post('/mostrar-reparaciones', async (req, res) => {
         res.status(500).send('Error al obtener reparaciones');
     }
 });
-
-function quiereJSON(req) {
-    return req.xhr || req.headers.accept?.includes("application/json");
-}
 
 router.post("/consultar-bot", async (req, res) => {
     const pregunta = req.body.pregunta_bd || req.body.pregunta_ia;
@@ -385,15 +476,63 @@ router.post("/consultar-bot", async (req, res) => {
     return res.json({ respuesta: textoIA });
 });
 
-function analizarIntencion(geminiResponse) {
-    const texto = geminiResponse.candidates[0].content.parts[0].text.toLowerCase();
-    return texto.includes('dashboard') ? 'generar_dashboard' : 'consultar_datos';
-}
-
 module.exports = router;
 
 
+// async function consultarGemini(pregunta) {
+//     try {
+//         const fetch = (await import('node-fetch')).default;
+//         const apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + apiKey;
+//         const response = await fetch(apiUrl, {
+//             method: 'POST',
+//             headers: { 'Content-Type': 'application/json' },
+//             body: JSON.stringify({
+//                 contents: [{ parts: [{ text: pregunta }] }]
+//             })
+//         });
+//         if (!response.ok) {
+//             console.error("ERROR en consultarGemini: response.ok false");
+//             throw new Error(`Error Gemini: ${response.status}`);
+//         }
+//         return await response.json();
+//     } catch (error) {
+//         console.error('Error al consultar Gemini:', error);
+//         return { error: 'Error al consultar Gemini API' };
+//     }
+// }
 
+
+// router.post('/', async (req, res) => {
+//     const pregunta = req.body.pregunta_bot || req.body.pregunta;
+//     try {
+//         const geminiResponse = await consultarGemini(pregunta);
+//         const intencion = analizarIntencion(geminiResponse);
+//         if (intencion === 'generar_dashboard') {
+//             return generarDashboard(req, res);
+//         }
+//         const consultaSequelize = await generarConsultaSQL(pregunta);
+//         if (!consultaSequelize) {
+//             console.log('No se pudo generar consulta SQL');
+//             return res.render('resultados', { resultados: null });
+//         }
+//         const resultados = await Inyectora.findAll(consultaSequelize);
+//         const plain = resultados.map(r => r.get({ plain: true }));
+//         res.render('resultados', { resultados: plain });
+//     } catch (error) {
+//         console.error('Error al procesar consulta:', error);
+//         res.status(500).send('Error al procesar la consulta');
+//     }
+// });
+
+// function quiereJSON(req) {
+//     return req.xhr || req.headers.accept?.includes("application/json");
+// }
+
+
+// function analizarIntencion(geminiResponse) {
+//     const texto = geminiResponse.candidates[0].content.parts[0].text.toLowerCase();
+//     return texto.includes('dashboard') ? 'generar_dashboard' : 'consultar_datos';
+// }
 
 
 

@@ -12,6 +12,10 @@ const helpers = require('./helpers.js');
 const app = express();
 const port = process.env.PORT || 8000;
 const requireAuth = require('./middleware/auth.js');
+const http = require("http");
+const { initSocket } = require("./socket");
+const server = http.createServer(app);
+const mainRoutes = require('./routes/index'); 
 
 app.engine('hbs', engine({
     defaultLayout: 'main',
@@ -48,8 +52,10 @@ app.use(session({
     }
 }));
 
+app.use(express.static(path.join(__dirname, 'public')));
 app.use('/auth', authRoutes); 
-app.use('/consultar', requireAuth, routes); 
+app.use('/consultar', requireAuth, routes, mainRoutes); 
+app.use('/', mainRoutes);                                 
 app.get('/', (req, res) => {
     res.redirect('/inicio'); 
 });
@@ -57,16 +63,22 @@ app.get('/inicio', (req, res) => {
     res.render('inicio'); 
 });
 
+initSocket(server);
+
 sequelize.sync({ force: false }) 
     .then(() => {
         console.log('Base de datos sincronizada.');
-        app.listen(port, () => {
+        
+        server.listen(port, () => {
             console.log(`server in http://localhost:${port}`);
         });
     })
     .catch(err => {
         console.error('Error al sincronizar la base de datos:', err);
     });
+
+
+
 
 
 

@@ -21,6 +21,14 @@ module.exports = (sequelize, DataTypes) => {
         contrasena: {
             type: DataTypes.STRING,
             allowNull: false
+        },
+        conectado: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false
+        },
+        disponible: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: true
         }
     }, {
         tableName: 'tecnicos',
@@ -33,7 +41,7 @@ module.exports = (sequelize, DataTypes) => {
         tecnico.contrasena = await bcrypt.hash(tecnico.contrasena, salt);
     });
 
-    Tecnico.prototype.validarContrasena = async function(contrasena) {
+    Tecnico.prototype.validarContrasena = async function (contrasena) {
         return bcrypt.compare(contrasena, this.contrasena);
     };
     return Tecnico;

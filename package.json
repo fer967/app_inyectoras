@@ -24,6 +24,7 @@
     "pg": "^8.14.0",
     "pg-hstore": "^2.3.4",
     "plotly.js": "^3.0.1",
-    "sequelize": "^6.37.6"
+    "sequelize": "^6.37.6",
+    "socket.io": "^4.8.1"
   }
 }

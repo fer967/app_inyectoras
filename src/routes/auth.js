@@ -38,6 +38,8 @@ router.post('/login', async (req, res) => {
         const tecnico = await Tecnico.findOne({ where: { nombre } });
         if (tecnico && await tecnico.validarContrasena(contrasena)) {
             req.session.tecnicoId = tecnico.id;
+            // Guardar la sesión antes de redirigir
+            await tecnico.update({ conectado: true });
             console.log('Técnico autenticado:', tecnico.nombre);
             console.log('NUEVA SESION', req.session.tecnicoId);
             req.session.save(function (err) {
@@ -58,13 +60,26 @@ router.post('/login', async (req, res) => {
     }
 });
 
-router.get('/logout', (req, res) => {
-    req.session.destroy((err) => {
-        if (err) {
-            console.error('Error al cerrar sesión:', err);
+router.get('/logout', async (req, res) => {
+    try {
+        const tecnicoId = req.session.tecnicoId;
+        if (tecnicoId) {
+            await Tecnico.update(
+                { conectado: false },
+                { where: { id: tecnicoId } }
+            );
+            console.log(`🔻 Técnico ${tecnicoId} desconectado (logout)`);
         }
+        req.session.destroy((err) => {
+            if (err) {
+                console.error('Error al cerrar sesión:', err);
+            }
+            res.redirect('/inicio');
+        });
+    } catch (error) {
+        console.error("Error en logout:", error);
         res.redirect('/inicio');
-    });
+    }
 });
 
 module.exports = router;
